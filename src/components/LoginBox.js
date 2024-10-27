@@ -4,7 +4,6 @@ import Navbar from "./UI/Navbar";
 import { NavLink, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { handleGoogleOAuth } from "../auth/authHelpers";
 import GoogleButton from "./UI/GoogleButton"; // Import GoogleButton component
 import { useAuth } from "./AuthContext"; // Import Auth context
 
@@ -29,6 +28,27 @@ function LoginBox() {
     baseURL: "http://api.ridecarpe.com",
     headers: { "Content-Type": "application/json" },
   });
+
+  const handleGoogleOAuth = async (credentialResponse, navigate) => {
+    try {
+      setLoading(true);
+
+      const token = credentialResponse.credential;
+  
+      const response = await apiClient.post("/auth/google-login", {
+        token,
+      });
+  
+      const jwtToken = response.data.jwt;
+      login(jwtToken);
+  
+    } catch (error) {
+      setErrors([error.response?.data?.message || "Login failed"]);
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const submitForm = async () => {
     setErrors([]);
