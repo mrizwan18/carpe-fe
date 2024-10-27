@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 
 function Navbar() {
+  const { isAuthenticated, logout } = useAuth();
   const [isToggle, setIsToggle] = useState(true);
 
   return (
@@ -9,7 +11,7 @@ function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
+          <div className="flex-shrink-0 flex items-center">
               <NavLink to="/">
                 <svg
                   className="h-8 w-8 text-primaryOrange-light"
@@ -23,7 +25,7 @@ function Navbar() {
                   />
                 </svg>
               </NavLink>
-              <span className="text-3xl font-bold px-3">Carpe</span>
+              <span className="text-3xl font-bold px-3">RideCarpe</span>
             </div>
             <div className="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
               <NavLink
@@ -34,59 +36,60 @@ function Navbar() {
               </NavLink>
             </div>
           </div>
-          <div className="sm:hidden flex items-center">
-            <button
-              type="button"
-              className={
-                "text-gray-500 hover:text-gray-600 focus:outline-none focus:text-gray-600 "
-              }
-              aria-label="toggle menu"
-              onClick={() => setIsToggle(!isToggle)}
-            >
-              <svg viewBox="0 0 24 24" className="h-6 w-6 fill-current">
-                <path
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d="M4 6h16v2H4V6zm0 5h16v2H4v-2zm0 5h16v2H4v-2z"
-                />
-              </svg>
-            </button>
-          </div>
           <div className="hidden sm:ml-6 sm:flex sm:items-center gap-2">
+            {isAuthenticated ? (
+              <button
+                onClick={logout}
+                className="bg-primaryOrange-light hover:bg-primaryOrange-dark text-white font-semibold py-2 px-4 rounded"
+              >
+                Logout
+              </button>
+            ) : (
+              <>
+                <NavLink
+                  to="/login"
+                  className="bg-primaryOrange-light hover:bg-primaryOrange-dark text-white font-semibold py-2 px-4 rounded"
+                >
+                  Login
+                </NavLink>
+                <NavLink
+                  to="/register"
+                  className="bg-primaryOrange-light hover:bg-primaryOrange-dark text-white font-semibold py-2 px-4 rounded"
+                >
+                  Signup
+                </NavLink>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+      <div id="menu" className={"sm:hidden " + (isToggle ? "hidden" : "")}>
+        <NavLink to="/support" className="block px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark hover:text-white focus:text-white">
+          Support
+        </NavLink>
+        {isAuthenticated ? (
+          <button
+            onClick={logout}
+            className="block w-full text-left px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark hover:text-white focus:text-white"
+          >
+            Logout
+          </button>
+        ) : (
+          <>
             <NavLink
               to="/login"
-              className="bg-primaryOrange-light hover:bg-primaryOrange-light text-white font-semibold py-2 px-4 rounded"
+              className="block px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark hover:text-white focus:text-white"
             >
               Login
             </NavLink>
             <NavLink
               to="/register"
-              className="bg-primaryOrange-light hover:bg-primaryOrange-light text-white font-semibold py-2 px-4 rounded"
+              className="block px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark hover:text-white focus:text-white"
             >
               Signup
             </NavLink>
-          </div>
-        </div>
-      </div>
-      <div id="menu" className={"sm:hidden " + (isToggle ? "hidden" : null)}>
-        <NavLink
-          to="/support"
-          className="block px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark  hover:text-white focus:text-white"
-        >
-          Support
-        </NavLink>
-        <NavLink
-          to="/register"
-          className="block px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark  hover:text-white focus:text-white"
-        >
-          Login
-        </NavLink>
-        <NavLink
-          to="/register"
-          className="block px-4 py-2 text-primaryBg hover:bg-primaryOrange-dark focus:bg-primaryOrange-dark hover:text-white focus:text-white"
-        >
-          Signup
-        </NavLink>
+          </>
+        )}
       </div>
     </nav>
   );

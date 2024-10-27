@@ -1,6 +1,7 @@
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectFilters, setPickup, setDestination, setTimein, setTimeout, setCost, resetFilters } from '../../store/filtersSlice';
+import { setPools } from '../../store/poolSlice'; // Import setPools action
 import DropDown from '../UI/DropDown';
 import { AiFillCloseCircle } from 'react-icons/ai';
 import axios from 'axios'; // For making API calls
@@ -8,11 +9,19 @@ import axios from 'axios'; // For making API calls
 export default function Filters({ openFilter, setOpenFilter }) {
   const dispatch = useDispatch();
   const filters = useSelector(selectFilters);
+  const token = localStorage.getItem("authToken"); 
+
+  const apiClient = axios.create({
+    baseURL: 'http://api.ridecarpe.com', 
+    timeout: 1000,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  });
 
   const applyFilters = () => {
-    axios.post('https://jsonplaceholder.typicode.com/posts', filters)
+    apiClient.get('/pools/all', { params: filters }) // Pass filters as query parameters
       .then(response => {
         console.log('API response:', response.data);
+        dispatch(setPools(response.data.content)); // Update Redux store with new pools data
         setOpenFilter(false);
       })
       .catch(error => {

@@ -1,8 +1,41 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import Filters from "./UI/Filters";
+import { useDispatch } from "react-redux";
+import { setPools } from "../store/poolSlice"; // Import action to set pools in Redux
+import axios from "axios";
+import { debounce } from "../components/utils/debounce"; // Import debounce utility
 
 function HomepageHero() {
   const [openFilter, setOpenFilter] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const dispatch = useDispatch();
+  const token = localStorage.getItem("authToken"); 
+
+  // API client with base URL and headers setup
+  const apiClient = axios.create({
+    baseURL: "http://api.ridecarpe.com",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+  });
+
+  // Function to make the actual API call
+  const fetchPools = async (query) => {
+    try {
+      const response = await apiClient.get(`/pools/all?title=${query}`);
+      dispatch(setPools(response.data.content)); // Set pools in Redux with the API response
+    } catch (error) {
+      console.error("Error fetching pools:", error);
+    }
+  };
+
+  // Debounced version of fetchPools
+  const debouncedFetchPools = useCallback(debounce(fetchPools, 300), []);
+
+  // Handle input change and trigger debounced API call
+  const handleInputChange = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    debouncedFetchPools(query); // Debounced call to the API
+  };
 
   return (
     <div className="flex flex-col justify-center items-center w-full mt-10">
@@ -12,11 +45,15 @@ function HomepageHero() {
             className="md:hidden w-full bg-gray-100 py-1 px-1 leading-tight focus:outline-none placeholder:text-black md:text-xl text-sm"
             type="text"
             placeholder="Karo Carpe..."
+            value={searchQuery}
+            onChange={handleInputChange}
           />
           <input
             className="md:flex hidden w-full bg-gray-100 ml-3 py-1 px-2 leading-tight focus:outline-none placeholder:text-black text-xl"
             type="text"
             placeholder="Petrol hai mehnga? Karo Carpe..."
+            value={searchQuery}
+            onChange={handleInputChange}
           />
           <svg
             className="w-6 h-6 text-gray-500 hover:text-black hover:cursor-pointer"
@@ -26,12 +63,18 @@ function HomepageHero() {
             strokeWidth="2"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            onClick={() => fetchPools(searchQuery)} // Direct call on click to fetch results
           >
             <path d="M22 22l-6-6"></path>
             <circle cx="10" cy="10" r="8"></circle>
           </svg>
         </div>
-        <button className="absolute -right-20 top-0 mt-2 mr-6 py-2 px-4 rounded-full text-primaryOrange-light font-medium focus:outline-none">
+        <button
+          className="absolute -right-20 top-0 mt-2 mr-6 py-2 px-4 rounded-full text-primaryOrange-light font-medium focus:outline-none"
+          onClick={() => {
+            setOpenFilter(!openFilter);
+          }}
+        >
           <svg
             fill="none"
             viewBox="0 0 24 24"
@@ -41,9 +84,6 @@ function HomepageHero() {
               "w-6 h-6 text-primaryOrange-light transition-transform rotate-90 " +
               (openFilter ? "-rotate-90" : null)
             }
-            onClick={() => {
-              setOpenFilter(!openFilter);
-            }}
           >
             <path
               strokeLinecap="round"

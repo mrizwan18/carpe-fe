@@ -1,8 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Footer from "./Footer";
 import Navbar from "./UI/Navbar";
-import { BsGoogle } from "react-icons/bs";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { handleGoogleOAuth } from "../auth/authHelpers";
+import GoogleButton from "./UI/GoogleButton"; // Import GoogleButton component
+import { useAuth } from "./AuthContext"; // Import Auth context
 
 function LoginBox() {
   const [userId, setUserId] = useState("");
@@ -10,33 +14,71 @@ function LoginBox() {
   const [userIdError, setUserIdError] = useState(false);
   const [passwordError, setPasswordError] = useState(false);
   const [errors, setErrors] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { isAuthenticated, login } = useAuth(); // Use the login function from the context
+  const navigate = useNavigate();
 
-  function submitForm() {
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
+
+  const apiClient = axios.create({
+    baseURL: "http://api.ridecarpe.com",
+    headers: { "Content-Type": "application/json" },
+  });
+
+  const submitForm = async () => {
     setErrors([]);
     setUserIdError(false);
     setPasswordError(false);
     let formErrors = [];
 
     if (!userId) {
-      formErrors.push("Valid User Id is required");
+      formErrors.push("Valid User ID is required");
       setUserIdError(true);
     }
 
     if (!password) {
       formErrors.push("Valid Password is required");
       setPasswordError(true);
-      setPassword("");
     }
 
-    setErrors(formErrors);
-  }
+    if (formErrors.length > 0) {
+      setErrors(formErrors);
+      toast.error("Please fix the errors before submitting.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await apiClient.post("/auth/login", {
+        email: userId,
+        password: password,
+      });
+
+      if (response.status === 200) {
+        // Login using context method to ensure state is updated
+        login(response.data.jwt); // This will update the isAuthenticated state in AuthContext
+      } else {
+        setErrors([response.data.message]);
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      setErrors([error.response?.data?.message || "Login failed"]);
+      toast.error(error.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
       <div className="w-full max-w-full mx-auto mt-20 md:mb-20 p-6 lg:w-5/12">
         <div className="relative z-0 flex flex-col justify-center bg-white border-0 shadow-soft-xl rounded-2xl lg:p-12">
-          {/* Error Handling */}
           {errors.length > 0 && (
             <div className="flex p-4 m-4 text-red-500 border-2 rounded-md border-red-500 justify-center">
               <div className="flex flex-col">
@@ -69,30 +111,30 @@ function LoginBox() {
             </div>
           )}
 
-          {/* Login Heading */}
           <div className="p-6 mb-0 text-center bg-white border-b-0 rounded-t-2xl text-gray-800 font-bold">
             <h5>Login with</h5>
           </div>
 
           {/* Google Login Button */}
           <div className="flex justify-center mt-4 mb-8">
-            <div className="flex font-bold text-center justify-evenly p-6 lg:gap-x-4 text-gray-800 align-middle transition-all bg-transparent border border-gray-300 border-solid rounded-lg shadow-none cursor-pointer hover:scale-102 leading-pro ease-soft-in tracking-tight-soft hover:bg-primaryOrange-light hover:text-white duration-200">
-              <BsGoogle size={24} />
-              <h2 className="ml-2">Continue with Google</h2>
-            </div>
+            <GoogleButton
+              onSuccess={(credentialResponse) =>
+                handleGoogleOAuth(credentialResponse, navigate)
+              }
+              onError={() => toast.error("Google login failed")}
+            />
           </div>
 
           {/* Login Form */}
           <div className="flex-auto p-4">
-            <form role="form">
+            <form onSubmit={(e) => e.preventDefault()}>
               <div className="mb-4">
                 <input
-                  type="text"
-                  className={
-                    "text-sm block w-full rounded-lg border border-solid border-gray-300 py-2 px-3 font-normal text-gray-700 transition-all focus:outline-none " +
-                    (userIdError ? "border-red-500" : "")
-                  }
-                  placeholder="User Id"
+                  type="email"
+                  className={`text-sm block w-full rounded-lg border border-solid border-gray-300 py-2 px-3 font-normal text-gray-700 transition-all focus:outline-none ${
+                    userIdError ? "border-red-500" : ""
+                  }`}
+                  placeholder="Email"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                 />
@@ -101,29 +143,33 @@ function LoginBox() {
               <div className="mb-4">
                 <input
                   type="password"
-                  className={
-                    "text-sm block w-full rounded-lg border border-solid border-gray-300 py-2 px-3 font-normal text-gray-700 transition-all focus:outline-none " +
-                    (passwordError ? "border-red-500" : "")
-                  }
+                  className={`text-sm block w-full rounded-lg border border-solid border-gray-300 py-2 px-3 font-normal text-gray-700 transition-all focus:outline-none ${
+                    passwordError ? "border-red-500" : ""
+                  }`}
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
 
-              {/* Login Button */}
+              {loading && (
+                <div className="text-center mb-4">
+                  <span>Loading...</span>
+                </div>
+              )}
+
               <div className="text-center">
                 <button
                   type="button"
                   onClick={submitForm}
-                  className="inline-block w-full px-6 py-3 mt-6 mb-2 font-bold text-center text-white uppercase transition-all bg-primaryOrange-light border-0 rounded-lg cursor-pointer hover:bg-primaryOrange-dark"
+                  disabled={loading}
+                  className="inline-block w-full px-6 py-3 mt-6 mb-2 font-bold text-center text-white uppercase transition-all bg-primaryOrange-light border-0 rounded-lg cursor-pointer hover:bg-primaryOrange-dark disabled:opacity-50"
                 >
                   Login
                 </button>
               </div>
             </form>
 
-            {/* Registration Link */}
             <p className="mt-4 mb-0 leading-normal text-sm text-center">
               Don't have an account?{" "}
               <NavLink to="/register" className="font-bold text-slate-700">
